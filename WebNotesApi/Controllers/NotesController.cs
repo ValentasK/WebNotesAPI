@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebNotesApi.Data;
+using WebNotesApi.DTOs;
 using WebNotesApi.Models;
 
 namespace WebNotesApi
@@ -23,10 +24,61 @@ namespace WebNotesApi
 
         // GET: api/Notes
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Note>>> GetNote()
+        public async Task<ActionResult<IEnumerable<Note>>> GetNote(string searchString, string searchDate)
         {
-            return await _context.Note.ToListAsync();
+            List<Note> sortedNotes = new List<Note>();
+
+            if (!String.IsNullOrEmpty(searchString) && !String.IsNullOrEmpty(searchDate)) // if search string was received 
+            {
+                sortedNotes = _context.Note.Where(x =>
+                (x.Title.ToLower().Contains(searchString.ToLower()) && x.Created.ToString().Contains(searchDate.ToLower())) ||
+                (x.Text.ToLower().Contains(searchString.ToLower()) && x.Created.ToString().Contains(searchDate.ToLower()))).ToList();
+             
+            }
+            else if (!String.IsNullOrEmpty(searchString))
+            {
+                sortedNotes = _context.Note.Where(x => x.Text.ToLower().Contains(searchString.ToLower()) ||
+                x.Title.ToLower().Contains(searchString.ToLower())).ToList();
+            }
+            else if (!String.IsNullOrEmpty(searchDate))
+            {
+                sortedNotes = _context.Note.Where(x => 
+                x.Created.ToString().Contains(searchDate.ToLower())).ToList();
+            }
+            else
+            {
+                sortedNotes = _context.Note.ToList();
+            }
+
+
+            return sortedNotes;
         }
+
+        /// /////////////////////////////////////////
+        /// 
+        //// GET: api/Notes
+        //[HttpPost]
+        //[Route("sorting/")]
+        //public async Task<ActionResult<IEnumerable<Note>>> GetNote(Sorting sorting)
+        //{
+
+        //    List<Note> sortedNotes = new List<Note>();
+
+        //    if (!String.IsNullOrEmpty(sorting.searchString)) // if search string was received 
+        //    {
+        //        sortedNotes = _context.Note.Where(x => x.Text.ToLower().Contains(sorting.searchString.ToLower()) ||
+        //        x.Title.ToLower().Contains(sorting.searchString.ToLower()) ||
+        //        x.Created.ToString().Contains(sorting.searchString.ToLower()) ||
+        //         x.Created.ToString().Contains(sorting.searchString.ToLower())
+        //         //|| x.Created.ToString("dd-MM-yyyy").Contains(sorting.searchString.ToLower())
+                 
+        //         ).ToList();
+
+
+                
+        //    }
+        //    return sortedNotes ;
+        //}
 
         // GET: api/Notes/5
         [HttpGet("{id}")]
@@ -78,17 +130,19 @@ namespace WebNotesApi
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Note>> PostNote(Note note)
+        public async Task<ActionResult<Note>> PostNote(NewNote note)
         {
-            //Note naujas = new Note();
-            //naujas.Title = "First message";
-            //naujas.Text = "First message text, content";
-            //naujas.Created = DateTime.Now;
+            Note newNote = new Note();
+            newNote.Title = note.Title;
+            newNote.Text = note.Text;
+            newNote.Created = DateTime.Now;
 
-            _context.Note.Add(note);
+
+
+            _context.Note.Add(newNote);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetNote", new { id = note.Id }, note);
+            return CreatedAtAction("GetNote", new { id = newNote.Id }, newNote);
         }
 
         // DELETE: api/Notes/5
